@@ -1,16 +1,31 @@
 require 'Body'
-vector = require 'hump.vector'
+require 'dump'
+local vector = require 'hump.vector'
+local json = require 'json'
 
 -- Constants
-local G = 5000 -- Gravitational constant (adjust for scale)
+local G = 6.674 * 10^-11 -- Gravitational constant (adjust for scale)
 
-local bodies = {
-    Body(vector(200, 200), vector(0, 0), 500, 10, {1, 0, 0}, true), -- central fixed circle
-    Body(vector(600, 400), vector(0, 0), 500, 10, {1, 0.5, 0}, true), -- another fixed circle
-    Body(vector(600, 300), vector(0, -150), 20, 2, {0, 0, 1}),
-    Body(vector(200, 300), vector(0, 150), 20, 2, {0, 1, 0}),
-    Body(vector(400, 500), vector(150, 0), 20, 2, {0, 1, 1})
-}
+local bodies = {}
+
+local function loadBodiesFromJSON(filename)
+    local file = love.filesystem.read(filename)
+    local bodiesData = json.decode(file)
+
+    local loadedBodies = {}
+    for _, bodyData in ipairs(bodiesData) do
+        local pos = vector(bodyData.pos[1], bodyData.pos[2])
+        local vel = vector(bodyData.vel[1], bodyData.vel[2])
+        local mass = bodyData.mass
+        local radius = bodyData.radius
+        local color = bodyData.color
+        local fixed = bodyData.fixed
+
+        table.insert(loadedBodies, Body(pos, vel, mass, radius, color, fixed))
+    end
+
+    return loadedBodies
+end
 
 local function calculateGravitationalForce(bodyFrom, bodyTo)
     local distance = bodyFrom.pos:dist(bodyTo.pos)
@@ -21,6 +36,10 @@ local function calculateGravitationalForce(bodyFrom, bodyTo)
     return direction * force
 end
 
+function love.load()
+    bodies = loadBodiesFromJSON('bodies.json')
+    print("bodies: ", dump(bodies))
+end
 -- Love2D callbacks
 function love.update(dt)
     -- Calculate gravitational force
